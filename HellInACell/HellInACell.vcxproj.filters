@@ -30,4 +30,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
+  <ItemGroup>
+    <None Include="..\plugins\settings\HellInACell.set">
+      <Filter>Source Files</Filter>
+    </None>
+  </ItemGroup>
 </Project>

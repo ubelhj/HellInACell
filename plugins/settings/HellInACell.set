@@ -1,0 +1,15 @@
+Hell In A Cell Scoreboard Plugin
+1|Enable plugin|hic_enable
+8|
+9|Point Values - Set these to what tournament organizers tell you for accurate scores
+5|Demolition value|hic_demolition_value|0|10
+5|Extermination value|hic_extermination_value|0|10
+5|Goal value|hic_goal_value|0|10
+8|
+9|In game overlay
+4|Counter X-location (% of screen)hic_x_location|0.0|1.0
+4|Counter Y-location (% of screen)|hic_y_location|0.0|1.0
+5|Counter red value|hic_red|0|255
+5|Counter green value|hic_green|0|255
+5|Counter blue value|hic_blue|0|255
+9|Plugin made by JerryTheBee#1117
