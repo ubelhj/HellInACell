@@ -7,7 +7,7 @@ Hell In A Cell Scoreboard Plugin
 5|Goal value|hic_goal_value|0|10
 8|
 9|In game overlay
-4|Counter X-location (% of screen)hic_x_location|0.0|1.0
+4|Counter X-location (% of screen)|hic_x_location|0.0|1.0
 4|Counter Y-location (% of screen)|hic_y_location|0.0|1.0
 5|Counter red value|hic_red|0|255
 5|Counter green value|hic_green|0|255
