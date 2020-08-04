@@ -1,5 +1,6 @@
 Hell In A Cell Scoreboard Plugin
 1|Enable plugin|hic_enable
+1|Spectator mode (if not toggled spectators will see doubled stats)|hic_spectator
 8|
 9|Point Values - Set these to what tournament organizers tell you for accurate scores
 5|Demolition value|hic_demolition_value|0|10

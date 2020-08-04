@@ -28,6 +28,11 @@ int overlayColors[3];
 // whether plugin is enabled
 bool enabled = false;
 
+// whether the user is a spectator
+bool spectator = false;
+// used to prevent spectators from having doubled stats
+bool spectatorHasSeen = false;
+
 void HellInACell::onLoad()
 {
     // enables or disables plugin
@@ -44,6 +49,11 @@ void HellInACell::onLoad()
             unhookEvents();
         }
         });
+
+    // enables or disables spectator mode (for some reason spectate causes double scoring otherwise)
+    auto spectatorVar = cvarManager->registerCvar("hic_spectator", "0", "Whether or not the viewer is a spectator");
+    spectator = spectatorVar.getBoolValue();
+    spectatorVar.addOnValueChanged([this](std::string, CVarWrapper cvar) { spectator = cvar.getBoolValue(); });
 
     auto demoPointsVar = cvarManager->registerCvar("hic_demolition_value", "1", "set demolition point value");
     values[demos] = demoPointsVar.getIntValue();
@@ -147,29 +157,55 @@ void HellInACell::statEvent(ServerWrapper caller, void* args) {
     int teamStart = team2 * receiverTeam;
 
     if (label.ToString().compare("Demolition") == 0) {
+        if (spectator) {
+            if (spectatorHasSeen) {
+                spectatorHasSeen = false;
+                return;
+            } else {
+                spectatorHasSeen = true;
+            }
+        }
         // if blue (0), stats[0]++
         // if orange (1), stats[4]++
         stats[teamStart + demos]++;
         // adds 1 demo to points of team
-        stats[teamStart + points] += values[demos];
+        stats[teamStart + points] = values[demos] * stats[teamStart + demos];
         return;
     }
 
     if (label.ToString().compare("Extermination") == 0) {
+        if (spectator) {
+            if (spectatorHasSeen) {
+                spectatorHasSeen = false;
+                return;
+            }
+            else {
+                spectatorHasSeen = true;
+            }
+        }
         // if blue (0), stats[1]++
         // if orange (1), stats[5]++
         stats[teamStart + exterms]++;
         // adds 1 exterm to points of team
-        stats[teamStart + points] += values[exterms];
+        stats[teamStart + points] = values[exterms] * stats[teamStart + exterms];
         return;
     }
 
     if (label.ToString().compare("Goal") == 0) {
+        if (spectator) {
+            if (spectatorHasSeen) {
+                spectatorHasSeen = false;
+                return;
+            }
+            else {
+                spectatorHasSeen = true;
+            }
+        }
         // if blue (0), stats[2]++
         // if orange (1), stats[6]++
         stats[teamStart + goals]++;
         // adds 1 goal to points of team
-        stats[teamStart + points] += values[goals];
+        stats[teamStart + points] = values[goals] * stats[teamStart + goals];
         return;
     }
 }
