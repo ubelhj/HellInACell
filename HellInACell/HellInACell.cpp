@@ -49,6 +49,12 @@ std::string fileNames[8] = {
     "orangePoints"
 };
 
+std::map<std::string, int> eventDictionary = {
+    { "Demolition", demos},
+    { "Extermination", exterms},
+    { "Goal", goals}
+};
+
 void HellInACell::onLoad()
 {
     // enables or disables plugin
@@ -144,7 +150,7 @@ void HellInACell::onLoad()
     overlayOrangeRedVar.addOnValueChanged([this](std::string, CVarWrapper cvar) {
         overlayColors[3] = cvar.getIntValue();
         });
-
+    
     // overlay orange team green value changer 
     auto overlayOrangeGreenVar = cvarManager->registerCvar("hic_orange_green", "98", "orange team green value in overlay", true, true, 0, true, 255);
     overlayColors[4] = overlayOrangeGreenVar.getIntValue();
@@ -214,61 +220,38 @@ void HellInACell::statEvent(ServerWrapper caller, void* args) {
     // where in the array the team of the receiver starts
     int teamStart = team2 * receiverTeam;
 
-    if (label.ToString().compare("Demolition") == 0) {
-        if (spectator) {
-            if (spectatorHasSeen) {
-                spectatorHasSeen = false;
-                return;
-            } else {
-                spectatorHasSeen = true;
-            }
-        }
-        // if blue (0), stats[0]++
-        // if orange (1), stats[4]++
-        stats[teamStart + demos]++;
-        // adds 1 demo to points of team
-        stats[teamStart + points] += values[demos];
-        write(demos, receiverTeam);
+    auto eventTypePtr = eventDictionary.find(label.ToString());
+
+    int eventType;
+
+    if (eventTypePtr != eventDictionary.end()) {
+        eventType = eventTypePtr->second;
+        cvarManager->log("event type: " + label.ToString());
+        cvarManager->log("event num: " + std::to_string(eventType));
+    }
+    else {
+        cvarManager->log("unused stat: " + label.ToString());
         return;
     }
 
-    if (label.ToString().compare("Extermination") == 0) {
-        if (spectator) {
-            if (spectatorHasSeen) {
-                spectatorHasSeen = false;
-                return;
-            }
-            else {
-                spectatorHasSeen = true;
-            }
+    // checks for spectator mode
+    // for some reason spectators get doubled stat events, so this accounts for that
+    if (spectator) {
+        if (spectatorHasSeen) {
+            spectatorHasSeen = false;
+            return;
+        } else {
+            spectatorHasSeen = true;
         }
-        // if blue (0), stats[1]++
-        // if orange (1), stats[5]++
-        stats[teamStart + exterms]++;
-        // adds 1 exterm to points of team
-        stats[teamStart + points] += values[exterms];
-        write(exterms, receiverTeam);
-        return;
     }
 
-    if (label.ToString().compare("Goal") == 0) {
-        if (spectator) {
-            if (spectatorHasSeen) {
-                spectatorHasSeen = false;
-                return;
-            }
-            else {
-                spectatorHasSeen = true;
-            }
-        }
-        // if blue (0), stats[2]++
-        // if orange (1), stats[6]++
-        stats[teamStart + goals]++;
-        // adds 1 goal to points of team
-        stats[teamStart + points] += values[goals];
-        write(goals, receiverTeam);
-        return;
-    }
+    // if blue (0), stats[0]++
+    // if orange (1), stats[4]++
+    stats[teamStart + eventType]++;
+    // adds 1 demo to points of team
+    stats[teamStart + points] += values[eventType];
+    write(eventType, receiverTeam);
+    return;
 }
 
 void HellInACell::startGame() {
