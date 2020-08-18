@@ -159,12 +159,14 @@ void HellInACell::onLoad()
         overlayColors[5] = cvar.getIntValue();
         });
 
+    cvarManager->registerNotifier("hic_reset",
+        [this](std::vector<std::string> params) {
+            startGame();
+        }, "Resets all stats", PERMISSION_ALL);
+
     gameWrapper->RegisterDrawable(std::bind(&HellInACell::render, this, std::placeholders::_1));
 
-    for (int i = 0; i < 4; i++) {
-        write(i, 0);
-        write(i, 1);
-    }
+    startGame();
 }
 
 void HellInACell::hookEvents() {
@@ -272,6 +274,11 @@ void HellInACell::statEvent(ServerWrapper caller, void* args) {
 void HellInACell::startGame() {
     for (int i = 0; i < numStats; i++) {
         stats[i] = 0;
+    }
+
+    for (int i = 0; i < 3; i++) {
+        write(i, 0);
+        write(i, 1);
     }
 }
 
