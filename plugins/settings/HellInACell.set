@@ -11,13 +11,12 @@ Hell In A Cell Scoreboard Plugin
 9|In game overlay
 4|Blue team X-location (% of screen)|hic_blue_x_location|0.0|1.0
 4|Blue team Y-location (% of screen)|hic_blue_y_location|0.0|1.0
-5|Blue team red value|hic_blue_red|0|255
-5|Blue team green value|hic_blue_green|0|255
-5|Blue team blue value|hic_blue_blue|0|255
+13|Blue team color|hic_blue_color
 8|
 4|Orange team X-location (% of screen)|hic_orange_x_location|0.0|1.0
 4|Orange team Y-location (% of screen)|hic_orange_y_location|0.0|1.0
-5|Orange team red value|hic_orange_red|0|255
-5|Orange team green value|hic_orange_green|0|255
-5|Orange team blue value|hic_orange_blue|0|255
+13|Orange team color|hic_orange_color
+8|
+9|If either team's stats are out of sync, hit f6 and type hic_team_stat to reset
+9|For example hic_blue_demos 1 sets blue team to have 1 demo and changes the score accordingly
 9|Plugin made by JerryTheBee#1117

@@ -3,20 +3,26 @@
 #include "bakkesmod/wrappers/GameObject/Stats/StatEventWrapper.h"
 #include <iostream>
 #include <fstream>
+#include <filesystem>
 
 BAKKESMOD_PLUGIN(HellInACell, "Hell in a cell scoreboard", plugin_version, PLUGINTYPE_THREADED)
 
-// holds the stats recorded by each team (demos, exterms, goals, points)
-int stats[8];
-// start of team 2's stats
-constexpr int team2 = 4;
-// location of each stat within team sub-array
-constexpr int demos = 0;
-constexpr int exterms = 1;
-constexpr int goals = 2;
-constexpr int points = 3;
 // size of stats array
 constexpr int numStats = 8;
+
+// holds the stats recorded by each team (demos, exterms, goals, points)
+int stats[numStats];
+
+// location of each stat within team sub-array
+enum stats {
+    demos,
+    exterms,
+    goals, 
+    points, 
+    // start of team 2's stats
+    team2
+};
+
 // point values of each stat (demos, exterms, goals)
 int values[3];
 
@@ -28,7 +34,11 @@ float yLocationOrange;
 // colors of overlay
 // 0-2 RGB of Blue team
 // 3-5 RGB of Orange team
-int overlayColors[6];
+LinearColor blueColor;
+LinearColor orangeColor;
+
+// where files are stored
+std::string fileLocation = "./HellInACell/";
 
 // whether plugin is enabled
 bool enabled = false;
@@ -49,7 +59,7 @@ std::string fileNames[8] = {
     "orangePoints"
 };
 
-std::map<std::string, int> eventDictionary = {
+const std::map<std::string, int> eventDictionary = {
     { "Demolition", demos},
     { "Extermination", exterms},
     { "Goal", goals}
@@ -123,46 +133,18 @@ void HellInACell::onLoad()
         yLocationOrange = cvar.getFloatValue();
         });
 
-    // overlay blue team red value changer 
-    auto overlayBlueRedVar = cvarManager->registerCvar("hic_blue_red", "0", "blue team red value in overlay", true, true, 0, true, 255);
-    overlayColors[0] = overlayBlueRedVar.getIntValue();
-    overlayBlueRedVar.addOnValueChanged([this](std::string, CVarWrapper cvar) {
-        overlayColors[0] = cvar.getIntValue();
+    // color of blue team scoreboard
+    auto blueColorVar = cvarManager->registerCvar("hic_blue_color", "#00b5ff", "color of overlay");
+    blueColor = blueColorVar.getColorValue();
+    blueColorVar.addOnValueChanged([this](std::string, CVarWrapper cvar) {
+        blueColor = cvar.getColorValue();
         });
 
-    // overlay blue team green value changer 
-    auto overlayBlueGreenVar = cvarManager->registerCvar("hic_blue_green", "181", "blue team green value in overlay", true, true, 0, true, 255);
-    overlayColors[1] = overlayBlueGreenVar.getIntValue();
-    overlayBlueGreenVar.addOnValueChanged([this](std::string, CVarWrapper cvar) {
-        overlayColors[1] = cvar.getIntValue();
-        });
-
-    // overlay blue team blue value changer 
-    auto overlayBlueBlueVar = cvarManager->registerCvar("hic_blue_blue", "255", "blue team blue value in overlay", true, true, 0, true, 255);
-    overlayColors[2] = overlayBlueBlueVar.getIntValue();
-    overlayBlueBlueVar.addOnValueChanged([this](std::string, CVarWrapper cvar) {
-        overlayColors[2] = cvar.getIntValue();
-        });
-
-    // overlay orange team red value changer 
-    auto overlayOrangeRedVar = cvarManager->registerCvar("hic_orange_red", "255", "orange team red value in overlay", true, true, 0, true, 255);
-    overlayColors[3] = overlayOrangeRedVar.getIntValue();
-    overlayOrangeRedVar.addOnValueChanged([this](std::string, CVarWrapper cvar) {
-        overlayColors[3] = cvar.getIntValue();
-        });
-    
-    // overlay orange team green value changer 
-    auto overlayOrangeGreenVar = cvarManager->registerCvar("hic_orange_green", "98", "orange team green value in overlay", true, true, 0, true, 255);
-    overlayColors[4] = overlayOrangeGreenVar.getIntValue();
-    overlayOrangeGreenVar.addOnValueChanged([this](std::string, CVarWrapper cvar) {
-        overlayColors[4] = cvar.getIntValue();
-        });
-
-    // overlay orange team blue value changer 
-    auto overlayOrangeBlueVar = cvarManager->registerCvar("hic_orange_blue", "0", "orange team blue value in overlay", true, true, 0, true, 255);
-    overlayColors[5] = overlayOrangeBlueVar.getIntValue();
-    overlayOrangeBlueVar.addOnValueChanged([this](std::string, CVarWrapper cvar) {
-        overlayColors[5] = cvar.getIntValue();
+    // color of orange team scoreboard
+    auto orangeColorVar = cvarManager->registerCvar("hic_orange_color", "ff6200", "color of overlay");
+    orangeColor = orangeColorVar.getColorValue();
+    orangeColorVar.addOnValueChanged([this](std::string, CVarWrapper cvar) {
+        orangeColor = cvar.getColorValue();
         });
 
     cvarManager->registerNotifier("hic_reset",
@@ -170,7 +152,67 @@ void HellInACell::onLoad()
             startGame();
         }, "Resets all stats", PERMISSION_ALL);
 
+    cvarManager->registerCvar("hic_orange_set_demos", "0", "set orange team demos", true, true, 0, false, 0, false)
+        .addOnValueChanged([this](std::string, auto cvar) {
+            // makes sure points are properly set
+            // ex if demos go from 1 -> 2, points should add 1
+            // if demos go from 2 -> 1, points should subtract 1
+            int difference = cvar.getIntValue() - stats[demos + team2];
+            stats[demos + team2] = cvar.getIntValue();
+            stats[points + team2] += difference * values[demos];
+            write(demos, 1);
+            });
+    cvarManager->registerCvar("hic_orange_set_exterms", "0", "set orange team exterms", true, true, 0, false, 0, false)
+        .addOnValueChanged([this](std::string, auto cvar) {
+            int difference = cvar.getIntValue() - stats[exterms + team2];
+            stats[exterms + team2] = cvar.getIntValue();
+            stats[points + team2] += difference * values[exterms];
+            write(exterms, 1);
+            });
+    cvarManager->registerCvar("hic_orange_set_goals", "0", "set orange team goals", true, true, 0, false, 0, false)
+        .addOnValueChanged([this](std::string, auto cvar) {
+            int difference = cvar.getIntValue() - stats[goals + team2];
+            stats[goals + team2] = cvar.getIntValue();
+            stats[points + team2] += difference * values[goals];
+            write(goals, 1);
+            });
+    cvarManager->registerCvar("hic_orange_set_points", "0", "set orange team points", true, true, 0, false, 0, false)
+        .addOnValueChanged([this](std::string, auto cvar) {
+            stats[points + team2] = cvar.getIntValue();
+            write(demos, 1);
+            });
+    cvarManager->registerCvar("hic_blue_set_demos", "0", "set blue team demos", true, true, 0, false, 0, false)
+        .addOnValueChanged([this](std::string, auto cvar) { 
+            int difference = cvar.getIntValue() - stats[demos];
+            stats[demos] = cvar.getIntValue();
+            stats[points] += difference * values[demos];
+            write(demos, 0);
+            });
+    cvarManager->registerCvar("hic_blue_set_exterms", "0", "set blue team exterms", true, true, 0, false, 0, false)
+        .addOnValueChanged([this](std::string, auto cvar) {
+            int difference = cvar.getIntValue() - stats[exterms];
+            stats[exterms] = cvar.getIntValue();
+            stats[points] += difference * values[exterms];
+            write(exterms, 0);
+            });
+    cvarManager->registerCvar("hic_blue_set_goals", "0", "set blue team goals", true, true, 0, false, 0, false)
+        .addOnValueChanged([this](std::string, auto cvar) {
+            int difference = cvar.getIntValue() - stats[goals];
+            stats[goals] = cvar.getIntValue();
+            stats[points] += difference * values[goals];
+            write(goals, 0);
+            });
+    cvarManager->registerCvar("hic_blue_set_points", "0", "set blue team points", true, true, 0, false, 0, false)
+        .addOnValueChanged([this](std::string, auto cvar) {
+            stats[points] = cvar.getIntValue();
+            write(goals, 0);
+            });
+
+
     gameWrapper->RegisterDrawable(std::bind(&HellInACell::render, this, std::placeholders::_1));
+
+    namespace fs = std::filesystem;
+    fs::create_directory(fileLocation);
 
     startGame();
 }
@@ -226,11 +268,11 @@ void HellInACell::statEvent(ServerWrapper caller, void* args) {
 
     if (eventTypePtr != eventDictionary.end()) {
         eventType = eventTypePtr->second;
-        cvarManager->log("event type: " + label.ToString());
-        cvarManager->log("event num: " + std::to_string(eventType));
+        //cvarManager->log("event type: " + label.ToString());
+        //cvarManager->log("event num: " + std::to_string(eventType));
     }
     else {
-        cvarManager->log("unused stat: " + label.ToString());
+        //cvarManager->log("unused stat: " + label.ToString());
         return;
     }
 
@@ -250,6 +292,7 @@ void HellInACell::statEvent(ServerWrapper caller, void* args) {
     stats[teamStart + eventType]++;
     // adds 1 demo to points of team
     stats[teamStart + points] += values[eventType];
+    //updateScore();
     write(eventType, receiverTeam);
     return;
 }
@@ -278,24 +321,25 @@ void HellInACell::render(CanvasWrapper canvas) {
 
     // blue team strings
     // sets to color from cvars
-    canvas.SetColor(overlayColors[0], overlayColors[1], overlayColors[2], 255);
-    canvas.SetPosition(Vector2({ int((float)screen.X * xLocationBlue), int((float)screen.Y * yLocationBlue) }));
+    canvas.SetColor(blueColor);
+    Vector2 blueLoc = Vector2({ int((float)screen.X * xLocationBlue), int((float)screen.Y * yLocationBlue) });
+    canvas.SetPosition(blueLoc);
     canvas.DrawString("Blue Team", fontSize, fontSize);
-    canvas.SetPosition(Vector2({ int((float)screen.X * xLocationBlue), int((fontSize * 11) + ((float)screen.Y * yLocationBlue)) }));
+    canvas.SetPosition(blueLoc + Vector2({ 0, int(fontSize * 11) }));
     canvas.DrawString("Demolitions: " + std::to_string(stats[demos]), fontSize, fontSize);
-    canvas.SetPosition(Vector2({ int((float)screen.X * xLocationBlue), int((fontSize * 22) + ((float)screen.Y * yLocationBlue)) }));
+    canvas.SetPosition(blueLoc + Vector2({ 0, int(fontSize * 11) }));
     canvas.DrawString("Exterminations: " + std::to_string(stats[exterms]), fontSize, fontSize);
-    canvas.SetPosition(Vector2({ int((float)screen.X * xLocationBlue), int((fontSize * 33) + ((float)screen.Y * yLocationBlue)) }));
+    canvas.SetPosition(blueLoc + Vector2({ 0, int(fontSize * 11) }));
     canvas.DrawString("Points: " + std::to_string(stats[points]), fontSize, fontSize);
     // orange team strings
-    canvas.SetColor(overlayColors[3], overlayColors[4], overlayColors[5], 255);
-    canvas.SetPosition(Vector2({ int((float)screen.X * xLocationOrange), int((float)screen.Y * yLocationOrange) }));
+    canvas.SetColor(orangeColor);
+    Vector2 orangeLoc = Vector2({ int((float)screen.X * xLocationOrange), int((float)screen.Y * yLocationOrange) });
     canvas.DrawString("Orange Team", fontSize, fontSize);
-    canvas.SetPosition(Vector2({ int((float)screen.X * xLocationOrange), int((fontSize * 11) + ((float)screen.Y * yLocationOrange)) }));
+    canvas.SetPosition(orangeLoc + Vector2({ 0, int(fontSize * 11) }));
     canvas.DrawString("Demolitions: " + std::to_string(stats[team2 + demos]), fontSize, fontSize);
-    canvas.SetPosition(Vector2({ int((float)screen.X * xLocationOrange), int((fontSize * 22) + ((float)screen.Y * yLocationOrange)) }));
+    canvas.SetPosition(orangeLoc + Vector2({ 0, int(fontSize * 11) }));
     canvas.DrawString("Exterminations: " + std::to_string(stats[team2 + exterms]), fontSize, fontSize);
-    canvas.SetPosition(Vector2({ int((float)screen.X * xLocationOrange), int((fontSize * 33) + ((float)screen.Y * yLocationOrange)) }));
+    canvas.SetPosition(orangeLoc + Vector2({ 0, int(fontSize * 11) }));
     canvas.DrawString("Points: " + std::to_string(stats[team2 + points]), fontSize, fontSize);
 }
 
@@ -305,15 +349,35 @@ void HellInACell::write(int stat, int team) {
 
     // writes the stat file
     std::ofstream statFile;
-    statFile.open("./HellInACell/" + fileNames[stat + teamStart] + ".txt");
+    statFile.open(fileLocation + fileNames[stat + teamStart] + ".txt");
     statFile << stats[stat + teamStart];
     statFile.close();
 
     // writes the points file
     std::ofstream pointsFile;
-    pointsFile.open("./HellInACell/" + fileNames[points + teamStart] + ".txt");
+    pointsFile.open(fileLocation + fileNames[points + teamStart] + ".txt");
     pointsFile << stats[points + teamStart];
     pointsFile.close();
+}
+
+void HellInACell::updateScore() {
+    if (!gameWrapper->IsInOnlineGame()) {
+        return;
+    }
+
+    auto sw = gameWrapper->GetOnlineGame();
+
+    if (sw.IsNull()) {
+        return;
+    }
+
+    auto teams = sw.GetTeams();
+
+    for (auto team : teams) {
+        cvarManager->log(std::to_string(team.GetScore()));
+        team.SetScore(100);
+        team.ScorePoint(100);
+    }
 }
 
 void HellInACell::onUnload()

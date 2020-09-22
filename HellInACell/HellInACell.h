@@ -18,5 +18,7 @@ class HellInACell: public BakkesMod::Plugin::BakkesModPlugin
 	void statEvent(ServerWrapper caller, void* args);
 	void render(CanvasWrapper canvas);
 	void write(int stat, int team);
+
+	void updateScore();
 };
 
