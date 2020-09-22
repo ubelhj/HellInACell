@@ -17,6 +17,6 @@ Hell In A Cell Scoreboard Plugin
 4|Orange team Y-location (% of screen)|hic_orange_y_location|0.0|1.0
 13|Orange team color|hic_orange_color
 8|
-9|If either team's stats are out of sync, hit f6 and type hic_team_stat to reset
-9|For example hic_blue_demos 1 sets blue team to have 1 demo and changes the score accordingly
+9|If either team's stats are out of sync, hit f6 and type hic_team_set_stat to reset
+9|For example hic_blue_set_demos 1 sets blue team to have 1 demo and changes the score accordingly
 9|Plugin made by JerryTheBee#1117

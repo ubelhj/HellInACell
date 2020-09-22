@@ -141,7 +141,7 @@ void HellInACell::onLoad()
         });
 
     // color of orange team scoreboard
-    auto orangeColorVar = cvarManager->registerCvar("hic_orange_color", "ff6200", "color of overlay");
+    auto orangeColorVar = cvarManager->registerCvar("hic_orange_color", "#ff6200", "color of overlay");
     orangeColor = orangeColorVar.getColorValue();
     orangeColorVar.addOnValueChanged([this](std::string, CVarWrapper cvar) {
         orangeColor = cvar.getColorValue();
@@ -325,21 +325,28 @@ void HellInACell::render(CanvasWrapper canvas) {
     Vector2 blueLoc = Vector2({ int((float)screen.X * xLocationBlue), int((float)screen.Y * yLocationBlue) });
     canvas.SetPosition(blueLoc);
     canvas.DrawString("Blue Team", fontSize, fontSize);
-    canvas.SetPosition(blueLoc + Vector2({ 0, int(fontSize * 11) }));
+    blueLoc += Vector2({ 0, int(fontSize * 11) });
+    canvas.SetPosition(blueLoc);
     canvas.DrawString("Demolitions: " + std::to_string(stats[demos]), fontSize, fontSize);
-    canvas.SetPosition(blueLoc + Vector2({ 0, int(fontSize * 11) }));
+    blueLoc += Vector2({ 0, int(fontSize * 11) });
+    canvas.SetPosition(blueLoc);
     canvas.DrawString("Exterminations: " + std::to_string(stats[exterms]), fontSize, fontSize);
-    canvas.SetPosition(blueLoc + Vector2({ 0, int(fontSize * 11) }));
+    blueLoc += Vector2({ 0, int(fontSize * 11) });
+    canvas.SetPosition(blueLoc);
     canvas.DrawString("Points: " + std::to_string(stats[points]), fontSize, fontSize);
     // orange team strings
     canvas.SetColor(orangeColor);
     Vector2 orangeLoc = Vector2({ int((float)screen.X * xLocationOrange), int((float)screen.Y * yLocationOrange) });
+    canvas.SetPosition(orangeLoc);
     canvas.DrawString("Orange Team", fontSize, fontSize);
-    canvas.SetPosition(orangeLoc + Vector2({ 0, int(fontSize * 11) }));
+    orangeLoc += Vector2({ 0, int(fontSize * 11) });
+    canvas.SetPosition(orangeLoc);
     canvas.DrawString("Demolitions: " + std::to_string(stats[team2 + demos]), fontSize, fontSize);
-    canvas.SetPosition(orangeLoc + Vector2({ 0, int(fontSize * 11) }));
+    orangeLoc += Vector2({ 0, int(fontSize * 11) });
+    canvas.SetPosition(orangeLoc);
     canvas.DrawString("Exterminations: " + std::to_string(stats[team2 + exterms]), fontSize, fontSize);
-    canvas.SetPosition(orangeLoc + Vector2({ 0, int(fontSize * 11) }));
+    orangeLoc += Vector2({ 0, int(fontSize * 11) });
+    canvas.SetPosition(orangeLoc);
     canvas.DrawString("Points: " + std::to_string(stats[team2 + points]), fontSize, fontSize);
 }
 
