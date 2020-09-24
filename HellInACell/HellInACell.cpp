@@ -367,26 +367,6 @@ void HellInACell::write(int stat, int team) {
     pointsFile.close();
 }
 
-void HellInACell::updateScore() {
-    if (!gameWrapper->IsInOnlineGame()) {
-        return;
-    }
-
-    auto sw = gameWrapper->GetOnlineGame();
-
-    if (sw.IsNull()) {
-        return;
-    }
-
-    auto teams = sw.GetTeams();
-
-    for (auto team : teams) {
-        cvarManager->log(std::to_string(team.GetScore()));
-        team.SetScore(100);
-        team.ScorePoint(100);
-    }
-}
-
 void HellInACell::onUnload()
 {
 }
