@@ -69,10 +69,6 @@ void HellInACell::onLoad()
 {
     // enables or disables plugin
     auto enableVar = cvarManager->registerCvar("hic_enable", "0", "enables hell in a cell scoreboard");
-    if (enableVar.getBoolValue()) {
-        enabled = true;
-        hookEvents();
-    };
     enableVar.addOnValueChanged([this](std::string, CVarWrapper cvar) {
         enabled = cvar.getBoolValue();
         if (enabled) {
@@ -218,19 +214,23 @@ void HellInACell::onLoad()
 }
 
 void HellInACell::hookEvents() {
-    gameWrapper->HookEventWithCaller<ServerWrapper>("Function TAGame.GFxHUD_TA.HandleStatTickerMessage",
+    gameWrapper->HookEventWithCallerPost<ServerWrapper>("Function TAGame.GFxHUD_TA.HandleStatTickerMessage",
         std::bind(&HellInACell::statEvent, this, std::placeholders::_1, std::placeholders::_2));
 
     // works on a starting game 
     gameWrapper->HookEventPost("Function GameEvent_Soccar_TA.WaitingForPlayers.BeginState", std::bind(&HellInACell::startGame, this));
     // works on a joined game in progress
     gameWrapper->HookEventPost("Function Engine.PlayerInput.InitInputSystem", std::bind(&HellInACell::startGame, this));
+    // hooks when the scoreboard time is updated
+    gameWrapper->HookEventPost("Function TAGame.GameEvent_Soccar_TA.OnGameTimeUpdated",
+        std::bind(&HellInACell::updateTime, this));
 }
 
 void HellInACell::unhookEvents() {
-    gameWrapper->UnhookEvent("Function TAGame.GFxHUD_TA.HandleStatTickerMessage");
-    gameWrapper->UnhookEvent("Function GameEvent_Soccar_TA.WaitingForPlayers.BeginState");
-    gameWrapper->UnhookEvent("Function Engine.PlayerInput.InitInputSystem");
+    gameWrapper->UnhookEventPost("Function TAGame.GFxHUD_TA.HandleStatTickerMessage");
+    gameWrapper->UnhookEventPost("Function GameEvent_Soccar_TA.WaitingForPlayers.BeginState");
+    gameWrapper->UnhookEventPost("Function Engine.PlayerInput.InitInputSystem");
+    gameWrapper->UnhookEventPost("Function TAGame.GameEvent_Soccar_TA.OnGameTimeUpdated");
 }
 
 struct TheArgStruct
@@ -292,7 +292,6 @@ void HellInACell::statEvent(ServerWrapper caller, void* args) {
     stats[teamStart + eventType]++;
     // adds 1 demo to points of team
     stats[teamStart + points] += values[eventType];
-    //updateScore();
     write(eventType, receiverTeam);
     return;
 }
@@ -306,6 +305,9 @@ void HellInACell::startGame() {
         write(i, 0);
         write(i, 1);
     }
+
+    // writes time as basic 5 minute game by default
+    writeTime(0, 300);
 }
 
 void HellInACell::render(CanvasWrapper canvas) {
@@ -365,6 +367,44 @@ void HellInACell::write(int stat, int team) {
     pointsFile.open(fileLocation + fileNames[points + teamStart] + ".txt");
     pointsFile << stats[points + teamStart];
     pointsFile.close();
+}
+
+void HellInACell::updateTime() {
+    auto sw = getGameServer();
+
+    if (sw.IsNull()) {
+        cvarManager->log("unable to check time, not in game");
+        return;
+    }
+
+    auto seconds = sw.GetSecondsRemaining();
+    bool isOT = sw.GetbOverTime();
+
+    writeTime(isOT, seconds);
+}
+
+void HellInACell::writeTime(bool isOT, int seconds) {
+    int minutes = seconds / 60;
+    int remSeconds = seconds % 60;
+
+    // writes the time file
+    std::ofstream statFile;
+    statFile.open(fileLocation + "time.txt");
+    statFile << std::to_string(minutes) + ":";
+    // if remSeconds is 1 character long, makes sure to make it 2 characters
+    if (remSeconds / 10 == 0) {
+        statFile << "0" + std::to_string(remSeconds);
+    } else {
+        statFile << std::to_string(remSeconds);
+    }
+    statFile.close();
+}
+
+ServerWrapper HellInACell::getGameServer() {
+    if (gameWrapper->IsInOnlineGame()) {
+        return gameWrapper->GetOnlineGame();
+    } 
+    return gameWrapper->GetGameEventAsServer();
 }
 
 void HellInACell::onUnload()
