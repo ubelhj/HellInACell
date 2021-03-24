@@ -57,8 +57,6 @@ std::filesystem::path fileLocation;
 bool enabled = false;
 bool enabledBG = false;
 
-// whether the user is a spectator
-bool spectator = false;
 // used to prevent spectators from having doubled stats
 bool spectatorHasSeen = false;
 
@@ -99,11 +97,6 @@ void HellInACell::onLoad()
     enableBGVar.addOnValueChanged([this](std::string, CVarWrapper cvar) {
         enabledBG = cvar.getBoolValue();
         });
-
-    // enables or disables spectator mode (for some reason spectate causes double scoring otherwise)
-    auto spectatorVar = cvarManager->registerCvar("hic_spectator", "0", "Whether or not the viewer is a spectator");
-    spectator = spectatorVar.getBoolValue();
-    spectatorVar.addOnValueChanged([this](std::string, CVarWrapper cvar) { spectator = cvar.getBoolValue(); });
 
     auto demoPointsVar = cvarManager->registerCvar("hic_demolition_value", "1", "set demolition point value");
     values[demos] = demoPointsVar.getIntValue();
@@ -320,21 +313,25 @@ void HellInACell::statEvent(ServerWrapper caller, void* args) {
 
     // checks for spectator mode
     // for some reason spectators get doubled stat events, so this accounts for that
-    CarWrapper myCar = gameWrapper->GetLocalCar();
+    PlayerControllerWrapper controller = gameWrapper->GetPlayerController();
 
-    if (myCar) {
-        unsigned int teamNum = myCar.GetTeamNum2();
+    if (controller) {
+        PriWrapper pri = controller.GetPRI();
 
-        if (teamNum != 0 && teamNum != 1) {
-            // player is spectator
-            if (spectatorHasSeen) {
-                spectatorHasSeen = false;
-                return;
+        if (pri) {
+            unsigned int teamNum = pri.GetTeamNum2();
+
+            if (teamNum != 0 && teamNum != 1) {
+                // player is spectator
+                if (spectatorHasSeen) {
+                    spectatorHasSeen = false;
+                    return;
+                }
+                else {
+                    spectatorHasSeen = true;
+                }
             }
-            else {
-                spectatorHasSeen = true;
-            }
-        }
+        }    
     }
 
     /*if (spectator) {
