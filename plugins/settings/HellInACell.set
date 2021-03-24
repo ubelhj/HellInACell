@@ -20,4 +20,6 @@ Hell In A Cell Scoreboard Plugin
 8|
 9|If either team's stats are out of sync, hit f6 and type hic_team_set_stat to reset
 9|For example hic_blue_set_demos 1 sets blue team to have 1 demo and changes the score accordingly
-9|Plugin made by JerryTheBee#1117
+9|Set each line of the overlay to a custom string with hic_set_render_
+9|For example, hic_set_render_exterminations "Exterms: " will shorten both "Exterminations: "
+9|Plugin made by JerryTheBee#1117 DM me on discord for custom plugin commissions!

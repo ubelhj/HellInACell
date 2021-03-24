@@ -239,6 +239,35 @@ void HellInACell::onLoad()
             write(goals, 0);
             });
 
+    cvarManager->registerCvar("hic_set_render_blue_team", renderPrefixes[0], "set blue team render string, default Blue Team")
+        .addOnValueChanged([this](std::string, auto cvar) {
+        renderPrefixes[0] = cvar.getStringValue();
+        renderAllStrings();
+            });
+
+    cvarManager->registerCvar("hic_set_render_demolitions", renderPrefixes[1], "set demolition render string, default Demolitons: ")
+        .addOnValueChanged([this](std::string, auto cvar) {
+        renderPrefixes[1] = cvar.getStringValue();
+        renderAllStrings();
+            });
+
+    cvarManager->registerCvar("hic_set_render_exterminations", renderPrefixes[2], "set extermination render string, default Exterminations: ")
+        .addOnValueChanged([this](std::string, auto cvar) {
+        renderPrefixes[2] = cvar.getStringValue();
+        renderAllStrings();
+            });
+
+    cvarManager->registerCvar("hic_set_render_points", renderPrefixes[3], "set points render string, default Points: ")
+        .addOnValueChanged([this](std::string, auto cvar) {
+        renderPrefixes[3] = cvar.getStringValue();
+        renderAllStrings();
+            });
+
+    cvarManager->registerCvar("hic_set_render_orange_team", renderPrefixes[4], "set orange team render string")
+        .addOnValueChanged([this](std::string, auto cvar) {
+        renderPrefixes[4] = cvar.getStringValue();
+        renderAllStrings();
+            });
 
     gameWrapper->RegisterDrawable(std::bind(&HellInACell::render, this, std::placeholders::_1));
 
@@ -365,6 +394,7 @@ void HellInACell::startGame() {
 
     // writes time as basic 5 minute game by default
     writeTime(0, 300);
+    renderAllStrings();
 }
 
 void HellInACell::render(CanvasWrapper canvas) {
