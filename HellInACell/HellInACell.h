@@ -2,7 +2,7 @@
 
 #include "bakkesmod/plugin/bakkesmodplugin.h"
 
-constexpr auto plugin_version = "1.0";
+constexpr auto plugin_version = "2.0";
 
 class HellInACell: public BakkesMod::Plugin::BakkesModPlugin
 {
@@ -21,6 +21,8 @@ class HellInACell: public BakkesMod::Plugin::BakkesModPlugin
 
 	void updateTime();
 	void writeTime(bool isOT, int seconds);
+
+	void renderAllStrings();
 
 	ServerWrapper getGameServer();
 };

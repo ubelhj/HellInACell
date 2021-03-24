@@ -1,21 +1,22 @@
 Hell In A Cell Scoreboard Plugin
 1|Enable plugin|hic_enable
-1|Spectator mode (if not toggled spectators will see doubled stats)|hic_spectator
 0|Reset game|hic_reset
 8|
-9|Point Values - Set these to what tournament organizers tell you for accurate scores
-5|Demolition value|hic_demolition_value|0|10
-5|Extermination value|hic_extermination_value|0|10
-5|Goal value|hic_goal_value|0|10
-8|
 9|In game overlay
+4|Text scale|hic_font_size|0.0|10.0
+1|Enable backgrounds|hic_bg_enable
+8|
 4|Blue team X-location (% of screen)|hic_blue_x_location|0.0|1.0
 4|Blue team Y-location (% of screen)|hic_blue_y_location|0.0|1.0
-13|Blue team color|hic_blue_color
+13|Blue team text color|hic_blue_color
+7|
+13|Blue team background color|hic_blue_color_bg
 8|
 4|Orange team X-location (% of screen)|hic_orange_x_location|0.0|1.0
 4|Orange team Y-location (% of screen)|hic_orange_y_location|0.0|1.0
-13|Orange team color|hic_orange_color
+13|Orange team text color|hic_orange_color
+7|
+13|Orange team background color|hic_orange_color_bg
 8|
 9|If either team's stats are out of sync, hit f6 and type hic_team_set_stat to reset
 9|For example hic_blue_set_demos 1 sets blue team to have 1 demo and changes the score accordingly

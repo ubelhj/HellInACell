@@ -12,6 +12,15 @@ constexpr int numStats = 8;
 
 // holds the stats recorded by each team (demos, exterms, goals, points)
 int stats[numStats];
+std::string renderStrings[numStats];
+
+std::string renderPrefixes[] = {
+    "Blue Team",
+    "Demolitions: ", 
+    "Exterminations: ",
+    "Points: ",
+    "Orange Team"
+};
 
 // location of each stat within team sub-array
 enum stats {
@@ -36,12 +45,17 @@ float yLocationOrange;
 // 3-5 RGB of Orange team
 LinearColor blueColor;
 LinearColor orangeColor;
+LinearColor blueColorBG;
+LinearColor orangeColorBG;
+float fontSize;
 
 // where files are stored
-std::string fileLocation = "./HellInACell/";
+std::filesystem::path fileLocation;
+//std::string fileLocation = "./HellInACell/";
 
 // whether plugin is enabled
 bool enabled = false;
+bool enabledBG = false;
 
 // whether the user is a spectator
 bool spectator = false;
@@ -67,6 +81,8 @@ const std::map<std::string, int> eventDictionary = {
 
 void HellInACell::onLoad()
 {
+    fileLocation = gameWrapper->GetDataFolder() / "HellInACell";
+
     // enables or disables plugin
     auto enableVar = cvarManager->registerCvar("hic_enable", "0", "enables hell in a cell scoreboard");
     enableVar.addOnValueChanged([this](std::string, CVarWrapper cvar) {
@@ -76,6 +92,12 @@ void HellInACell::onLoad()
         } else {
             unhookEvents();
         }
+        });
+
+    // enables or disables background
+    auto enableBGVar = cvarManager->registerCvar("hic_bg_enable", "0", "enables hell in a cell background");
+    enableBGVar.addOnValueChanged([this](std::string, CVarWrapper cvar) {
+        enabledBG = cvar.getBoolValue();
         });
 
     // enables or disables spectator mode (for some reason spectate causes double scoring otherwise)
@@ -99,6 +121,12 @@ void HellInACell::onLoad()
     values[goals] = goalPointsVar.getIntValue();
     goalPointsVar.addOnValueChanged([this](std::string, CVarWrapper cvar) {
         values[goals] = cvar.getIntValue();
+        });
+
+    auto fontSizeVar = cvarManager->registerCvar("hic_font_size", "2.0", "set font size");
+    fontSize = fontSizeVar.getFloatValue();
+    fontSizeVar.addOnValueChanged([this](std::string, CVarWrapper cvar) {
+        fontSize = cvar.getFloatValue();
         });
 
     // sets cvar to move blue team counter's X location
@@ -130,17 +158,31 @@ void HellInACell::onLoad()
         });
 
     // color of blue team scoreboard
-    auto blueColorVar = cvarManager->registerCvar("hic_blue_color", "#00b5ff", "color of overlay");
+    auto blueColorVar = cvarManager->registerCvar("hic_blue_color", "#00b5ff", "color of blue overlay");
     blueColor = blueColorVar.getColorValue();
     blueColorVar.addOnValueChanged([this](std::string, CVarWrapper cvar) {
         blueColor = cvar.getColorValue();
         });
 
+    // color of blue team scoreboard background
+    auto blueBGColorVar = cvarManager->registerCvar("hic_blue_color_bg", "#0000008C", "color of blue overlay bakcground");
+    blueColorBG = blueBGColorVar.getColorValue();
+    blueBGColorVar.addOnValueChanged([this](std::string, CVarWrapper cvar) {
+        blueColorBG = cvar.getColorValue();
+        });
+
     // color of orange team scoreboard
-    auto orangeColorVar = cvarManager->registerCvar("hic_orange_color", "#ff6200", "color of overlay");
+    auto orangeColorVar = cvarManager->registerCvar("hic_orange_color", "#ff6200", "color of orange overlay");
     orangeColor = orangeColorVar.getColorValue();
     orangeColorVar.addOnValueChanged([this](std::string, CVarWrapper cvar) {
         orangeColor = cvar.getColorValue();
+        });
+
+    // color of orange team scoreboard background
+    auto orangeBGColorVar = cvarManager->registerCvar("hic_orange_color_bg", "#0000008C", "color of orange overlay bakcground");
+    orangeColorBG = orangeBGColorVar.getColorValue();
+    orangeBGColorVar.addOnValueChanged([this](std::string, CVarWrapper cvar) {
+        orangeColorBG = cvar.getColorValue();
         });
 
     cvarManager->registerNotifier("hic_reset",
@@ -278,14 +320,32 @@ void HellInACell::statEvent(ServerWrapper caller, void* args) {
 
     // checks for spectator mode
     // for some reason spectators get doubled stat events, so this accounts for that
-    if (spectator) {
+    CarWrapper myCar = gameWrapper->GetLocalCar();
+
+    if (myCar) {
+        unsigned int teamNum = myCar.GetTeamNum2();
+
+        if (teamNum != 0 && teamNum != 1) {
+            // player is spectator
+            if (spectatorHasSeen) {
+                spectatorHasSeen = false;
+                return;
+            }
+            else {
+                spectatorHasSeen = true;
+            }
+        }
+    }
+
+    /*if (spectator) {
         if (spectatorHasSeen) {
             spectatorHasSeen = false;
             return;
-        } else {
+        }
+        else {
             spectatorHasSeen = true;
         }
-    }
+    }*/
 
     // if blue (0), stats[0]++
     // if orange (1), stats[4]++
@@ -317,39 +377,85 @@ void HellInACell::render(CanvasWrapper canvas) {
 
     Vector2 screen = canvas.GetSize();
 
+    Vector2 blueLoc({ int((float)screen.X * xLocationBlue), int((float)screen.Y * yLocationBlue) });
+    Vector2 orangeLoc({ int((float)screen.X * xLocationOrange), int((float)screen.Y * yLocationOrange) });
+
     // in 1080p font size is 2
     // y value of 2 size text is approx 20
-    float fontSize = ((float)screen.X / (float)1920) * 2;
+    //float fontSize = ((float)screen.X / (float)1920) * 2;
+
+    Vector2F maxStringSizeBlue = { -1.0, -1.0 };
+    for (int i = 0; i < 4; i++) {
+        Vector2F newStringSize = canvas.GetStringSize(renderStrings[i], fontSize, fontSize);
+
+        if (newStringSize.X > maxStringSizeBlue.X) {
+            maxStringSizeBlue.X = newStringSize.X;
+        }
+
+        if (newStringSize.Y > maxStringSizeBlue.Y) {
+            maxStringSizeBlue.Y = newStringSize.Y;
+        }
+    }
+
+    Vector2F maxStringSizeOrange = { -1.0, -1.0 };
+    for (int i = 4; i < 8; i++) {
+        Vector2F newStringSize = canvas.GetStringSize(renderStrings[i], fontSize, fontSize);
+
+        if (newStringSize.X > maxStringSizeOrange.X) {
+            maxStringSizeOrange.X = newStringSize.X;
+        }
+
+        if (newStringSize.Y > maxStringSizeOrange.Y) {
+            maxStringSizeOrange.Y = newStringSize.Y;
+        }
+    }
+
+    if (enabledBG) {
+        canvas.SetColor(blueColorBG);
+        canvas.SetPosition(blueLoc);
+        canvas.FillBox(Vector2({ int(maxStringSizeBlue.X), int(maxStringSizeBlue.Y * 4) }));
+
+        canvas.SetColor(orangeColorBG);
+        canvas.SetPosition(orangeLoc);
+        canvas.FillBox(Vector2({ int(maxStringSizeOrange.X), int(maxStringSizeOrange.Y * 4) }));
+    }
 
     // blue team strings
     // sets to color from cvars
     canvas.SetColor(blueColor);
-    Vector2 blueLoc = Vector2({ int((float)screen.X * xLocationBlue), int((float)screen.Y * yLocationBlue) });
-    canvas.SetPosition(blueLoc);
-    canvas.DrawString("Blue Team", fontSize, fontSize);
-    blueLoc += Vector2({ 0, int(fontSize * 11) });
-    canvas.SetPosition(blueLoc);
-    canvas.DrawString("Demolitions: " + std::to_string(stats[demos]), fontSize, fontSize);
-    blueLoc += Vector2({ 0, int(fontSize * 11) });
-    canvas.SetPosition(blueLoc);
-    canvas.DrawString("Exterminations: " + std::to_string(stats[exterms]), fontSize, fontSize);
-    blueLoc += Vector2({ 0, int(fontSize * 11) });
-    canvas.SetPosition(blueLoc);
-    canvas.DrawString("Points: " + std::to_string(stats[points]), fontSize, fontSize);
+    for (int i = 0; i < 4; i++) {
+        // locates based on screen and font size
+        canvas.SetPosition(blueLoc);
+        blueLoc.Y += maxStringSizeBlue.Y;
+        // does averages if the user wants them and if a stat has an average
+        //std::string renderString = statToRenderString(overlayStats[i], overlayAverages[i]);
+        //int width = renderString.length() * fontSize * 10;
+        canvas.DrawString(renderStrings[i], fontSize, fontSize, false);
+    }
     // orange team strings
     canvas.SetColor(orangeColor);
-    Vector2 orangeLoc = Vector2({ int((float)screen.X * xLocationOrange), int((float)screen.Y * yLocationOrange) });
-    canvas.SetPosition(orangeLoc);
-    canvas.DrawString("Orange Team", fontSize, fontSize);
-    orangeLoc += Vector2({ 0, int(fontSize * 11) });
-    canvas.SetPosition(orangeLoc);
-    canvas.DrawString("Demolitions: " + std::to_string(stats[team2 + demos]), fontSize, fontSize);
-    orangeLoc += Vector2({ 0, int(fontSize * 11) });
-    canvas.SetPosition(orangeLoc);
-    canvas.DrawString("Exterminations: " + std::to_string(stats[team2 + exterms]), fontSize, fontSize);
-    orangeLoc += Vector2({ 0, int(fontSize * 11) });
-    canvas.SetPosition(orangeLoc);
-    canvas.DrawString("Points: " + std::to_string(stats[team2 + points]), fontSize, fontSize);
+    for (int i = 4; i < 8; i++) {
+        // locates based on screen and font size
+        canvas.SetPosition(orangeLoc);
+        orangeLoc.Y += maxStringSizeOrange.Y;
+        // does averages if the user wants them and if a stat has an average
+        //std::string renderString = statToRenderString(overlayStats[i], overlayAverages[i]);
+        //int width = renderString.length() * fontSize * 10;
+        canvas.DrawString(renderStrings[i], fontSize, fontSize, false);
+    }
+    
+}
+
+void HellInACell::renderAllStrings() {
+    renderStrings[0] = renderPrefixes[0];
+    renderStrings[1] = renderPrefixes[1] + std::to_string(stats[demos]);
+    renderStrings[2] = renderPrefixes[2] + std::to_string(stats[exterms]);
+    renderStrings[3] = renderPrefixes[3] + std::to_string(stats[points]);
+    // orange team strings
+    renderStrings[4] = renderPrefixes[4];
+    renderStrings[5] = renderPrefixes[1] + std::to_string(stats[team2 + demos]);
+    renderStrings[6] = renderPrefixes[2] + std::to_string(stats[team2 + exterms]);
+    renderStrings[7] = renderPrefixes[3] + std::to_string(stats[team2 + points]);
 }
 
 void HellInACell::write(int stat, int team) {
@@ -357,16 +463,16 @@ void HellInACell::write(int stat, int team) {
     int teamStart = team2 * team;
 
     // writes the stat file
-    std::ofstream statFile;
-    statFile.open(fileLocation + fileNames[stat + teamStart] + ".txt");
+    std::ofstream statFile (fileLocation / (fileNames[stat + teamStart] + ".txt"));
     statFile << stats[stat + teamStart];
     statFile.close();
 
     // writes the points file
-    std::ofstream pointsFile;
-    pointsFile.open(fileLocation + fileNames[points + teamStart] + ".txt");
+    std::ofstream pointsFile (fileLocation / (fileNames[points + teamStart] + ".txt"));
     pointsFile << stats[points + teamStart];
     pointsFile.close();
+
+    renderAllStrings();
 }
 
 void HellInACell::updateTime() {
@@ -388,8 +494,7 @@ void HellInACell::writeTime(bool isOT, int seconds) {
     int remSeconds = seconds % 60;
 
     // writes the time file
-    std::ofstream statFile;
-    statFile.open(fileLocation + "time.txt");
+    std::ofstream statFile (fileLocation / "time.txt");
     statFile << std::to_string(minutes) + ":";
     // if remSeconds is 1 character long, makes sure to make it 2 characters
     if (remSeconds / 10 == 0) {
@@ -398,6 +503,8 @@ void HellInACell::writeTime(bool isOT, int seconds) {
         statFile << std::to_string(remSeconds);
     }
     statFile.close();
+
+    renderAllStrings();
 }
 
 ServerWrapper HellInACell::getGameServer() {
