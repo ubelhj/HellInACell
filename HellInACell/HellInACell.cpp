@@ -54,8 +54,8 @@ std::filesystem::path fileLocation;
 //std::string fileLocation = "./HellInACell/";
 
 // whether plugin is enabled
-bool enabled = false;
 bool enabledBG = false;
+bool overlayEnabled = true;
 
 // used to prevent spectators from having doubled stats
 bool spectatorHasSeen = false;
@@ -84,16 +84,21 @@ void HellInACell::onLoad()
     // enables or disables plugin
     auto enableVar = cvarManager->registerCvar("hic_enable", "0", "enables hell in a cell scoreboard");
     enableVar.addOnValueChanged([this](std::string, CVarWrapper cvar) {
-        enabled = cvar.getBoolValue();
-        if (enabled) {
+        if (cvar.getBoolValue()) {
             hookEvents();
         } else {
             unhookEvents();
         }
         });
 
+    // enables or disables plugin overlay
+    cvarManager->registerCvar("hic_enable_overlay", "1", "enables hell in a cell in-game overlay")
+        .addOnValueChanged([this](std::string, CVarWrapper cvar) {
+        overlayEnabled = cvar.getBoolValue();
+        });
+
     // enables or disables background
-    auto enableBGVar = cvarManager->registerCvar("hic_bg_enable", "0", "enables hell in a cell background");
+    auto enableBGVar = cvarManager->registerCvar("hic_enable_bg", "0", "enables hell in a cell background");
     enableBGVar.addOnValueChanged([this](std::string, CVarWrapper cvar) {
         enabledBG = cvar.getBoolValue();
         });
@@ -269,8 +274,6 @@ void HellInACell::onLoad()
         renderAllStrings();
             });
 
-    gameWrapper->RegisterDrawable(std::bind(&HellInACell::render, this, std::placeholders::_1));
-
     namespace fs = std::filesystem;
     fs::create_directory(fileLocation);
 
@@ -288,6 +291,8 @@ void HellInACell::hookEvents() {
     // hooks when the scoreboard time is updated
     gameWrapper->HookEventPost("Function TAGame.GameEvent_Soccar_TA.OnGameTimeUpdated",
         std::bind(&HellInACell::updateTime, this));
+
+    gameWrapper->RegisterDrawable(std::bind(&HellInACell::render, this, std::placeholders::_1));
 }
 
 void HellInACell::unhookEvents() {
@@ -295,6 +300,8 @@ void HellInACell::unhookEvents() {
     gameWrapper->UnhookEventPost("Function GameEvent_Soccar_TA.WaitingForPlayers.BeginState");
     gameWrapper->UnhookEventPost("Function Engine.PlayerInput.InitInputSystem");
     gameWrapper->UnhookEventPost("Function TAGame.GameEvent_Soccar_TA.OnGameTimeUpdated");
+
+    gameWrapper->UnregisterDrawables();
 }
 
 struct TheArgStruct
@@ -398,7 +405,7 @@ void HellInACell::startGame() {
 }
 
 void HellInACell::render(CanvasWrapper canvas) {
-    if (!enabled) {
+    if (!overlayEnabled) {
         return;
     }
 

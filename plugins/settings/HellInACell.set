@@ -3,8 +3,9 @@ Hell In A Cell Scoreboard Plugin
 0|Reset game|hic_reset
 8|
 9|In game overlay
+1|Enable in-game overlay|hic_enable_overlay
 4|Text scale|hic_font_size|0.0|10.0
-1|Enable backgrounds|hic_bg_enable
+1|Enable backgrounds|hic_enable_bg
 8|
 4|Blue team X-location (% of screen)|hic_blue_x_location|0.0|1.0
 4|Blue team Y-location (% of screen)|hic_blue_y_location|0.0|1.0
