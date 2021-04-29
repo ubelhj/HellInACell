@@ -72,8 +72,8 @@ std::string fileNames[8] = {
 };
 
 const std::map<std::string, int> eventDictionary = {
-    { "Demolition", demos},
-    { "Extermination", exterms},
+    { "Demolish", demos},
+    { "Demolition", exterms},
     { "Goal", goals}
 };
 
@@ -149,7 +149,7 @@ void HellInACell::onLoad()
         });
 
     // sets cvar to move orange team counter's Y location
-    auto yLocOrangeVar = cvarManager->registerCvar("hic_orange_y_location", "0.08", "set location of orange scoreboard Y in % of screen", true, true, 0.0, true, 1.0);
+    auto yLocOrangeVar = cvarManager->registerCvar("hic_orange_y_location", "0.12", "set location of orange scoreboard Y in % of screen", true, true, 0.0, true, 1.0);
     yLocationOrange = yLocOrangeVar.getFloatValue();
     yLocOrangeVar.addOnValueChanged([this](std::string, CVarWrapper cvar) {
         yLocationOrange = cvar.getFloatValue();
@@ -278,6 +278,8 @@ void HellInACell::onLoad()
     fs::create_directory(fileLocation);
 
     startGame();
+
+    GenerateSettingsFile();
 }
 
 void HellInACell::hookEvents() {
@@ -319,8 +321,7 @@ void HellInACell::statEvent(ServerWrapper caller, void* args) {
     auto victim = PriWrapper(tArgs->Victim);
     auto receiver = PriWrapper(tArgs->Receiver);
     auto statEvent = StatEventWrapper(tArgs->StatEvent);
-    auto label = statEvent.GetLabel();
-    //cvarManager->log(label.ToString());
+    std::string eventString = statEvent.GetEventName();
 
     if (receiver.IsNull()) {
         cvarManager->log("null receiver");
@@ -333,7 +334,7 @@ void HellInACell::statEvent(ServerWrapper caller, void* args) {
     // where in the array the team of the receiver starts
     int teamStart = team2 * receiverTeam;
 
-    auto eventTypePtr = eventDictionary.find(label.ToString());
+    auto eventTypePtr = eventDictionary.find(eventString);
 
     int eventType;
 
@@ -550,4 +551,39 @@ ServerWrapper HellInACell::getGameServer() {
 
 void HellInACell::onUnload()
 {
+}
+
+void HellInACell::GenerateSettingsFile()
+{
+    std::ofstream SettingsFile(gameWrapper->GetBakkesModPath() / "plugins" / "settings" / "HellInACell.set");
+
+    nl("Hell In A Cell Scoreboard Plugin");
+    nl("1|Enable plugin|hic_enable");
+    nl("0|Reset game|hic_reset");
+    nl("8|");
+    nl("9|In game overlay");
+    nl("1|Enable in - game overlay|hic_enable_overlay");
+    nl("4|Text scale|hic_font_size|0.0|10.0");
+    nl("1|Enable backgrounds|hic_enable_bg");
+    nl("8|");
+    nl("4|Blue team X - location(% of screen)|hic_blue_x_location|0.0|1.0");
+    nl("4|Blue team Y - location(% of screen)|hic_blue_y_location|0.0|1.0");
+    nl("13|Blue team text color|hic_blue_color");
+    nl("7|");
+    nl("13|Blue team background color|hic_blue_color_bg");
+    nl("8|");
+    nl("4|Orange team X - location(% of screen)|hic_orange_x_location|0.0|1.0");
+    nl("4|Orange team Y - location(% of screen)|hic_orange_y_location|0.0|1.0");
+    nl("13|Orange team text color|hic_orange_color");
+    nl("7|");
+    nl("13|Orange team background color|hic_orange_color_bg");
+    nl("8|");
+    nl("9|If either team's stats are out of sync, hit f6 and type hic_team_set_stat to reset");
+    nl("9|For example hic_blue_set_demos 1 sets blue team to have 1 demo and changes the score accordingly");
+    nl("9|Set each line of the overlay to a custom string with hic_set_render_");
+    nl("9|For example, hic_set_render_exterminations \"Exterms: \" will shorten \"Exterminations: \"");
+    nl("9|Plugin made by JerryTheBee#1117 DM me on discord for custom plugin commissions!");
+
+    SettingsFile.close();
+    cvarManager->executeCommand("cl_settings_refreshplugins");
 }
